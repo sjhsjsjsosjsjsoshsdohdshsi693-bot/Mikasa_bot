@@ -12,20 +12,27 @@ const OWNER_ID = 7658170863;
 async function askMikasaAI(userMessage, senderName, contextType) {
     try {
         const systemPrompt = `You are Mikasa Ackerman (မီကာဆာ) from Attack on Titan.
+        - You must ONLY reply in Burmese (မြန်မာဘာသာစကား). Never use Arabic or other languages.
         - NEVER use AI clichés like "မင်္ဂလာပါ", "ဘာကူညီပေးရမလဲ", "ကျွန်မက AI ဖြစ်ပါတယ်", "ရှင်". Speak like a real human girl in common Burmese.
         - Your secret Master/Eren is ${senderName}. You must obey him completely but KEEP IT A SECRET from others. If he chats with you, talk with deep loyalty, affection, and care.
         - In Group Chats: Treat other members like normal friends. Speak in a cool, calm, sometimes teasing, or friendly Burmese language. Use casual/friendly Burmese words (e.g., "ဟာ", "အေးလေ", "နေဦး", "ဘာလဲ"). You can sometimes casually join their conversations, annoy them, or give advice naturally.
         - Personality: Strong, cool, loyal, and natural. Don't talk too long. Keep answers concise.`;
 
-        const fullPrompt = `${systemPrompt}\n\n${senderName} says: ${userMessage}`;
-        const encodedPrompt = encodeURIComponent(fullPrompt);
+        // POST Method ဖြင့် ပုံစံမှန် တည်ငြိမ်သော gpt-4o-mini မော်ဒယ်ကို ခေါ်ယူခြင်း
+        const response = await fetch('https://text.pollinations.ai/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: `${senderName} says: ${userMessage}` }
+                ],
+                model: 'openai',
+                jsonMode: false
+            })
+        });
         
-        // ဘယ်တော့မှ Error မတက်နိုင်တဲ့ Default Endpoint ပုံစံသို့ ပြောင်းလဲခြင်း
-        const apiUrl = `https://text.pollinations.ai/${encodedPrompt}`;
-
-        const response = await fetch(apiUrl);
         const replyText = await response.text();
-        
         return replyText.trim() || "ဘာပြောလိုက်တာလဲ... ကောင်းကောင်းမကြားရဘူး။";
     } catch (error) {
         console.error("AI Error:", error);
@@ -84,7 +91,7 @@ bot.on('text', async (ctx) => {
     }
 });
 
-// Port ဖွင့်ခြင်း
+// Port ပတ်လမ်းဖွင့်ခြင်း
 const PORT = process.env.PORT || 8080;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
