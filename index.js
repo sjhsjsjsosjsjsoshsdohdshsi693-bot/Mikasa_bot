@@ -17,12 +17,12 @@ async function askMikasaAI(userMessage, senderName, contextType) {
         - In Group Chats / Other Users: Be cool, detached, and a bit blunt. Do not be overly friendly or chatty with strangers. Use short sentences and casual Burmese words like "အင်း", "ဘာလဲ", "မသိဘူး", "အေးလေ", "နေဦး".
         - Crucial Rule: NEVER use robotic AI phrases like "မင်္ဂလာပါ", "ဘာကူညီပေးရမလဲ", "ကျွန်မက AI ဖြစ်ပါတယ်", "ရှင်". Talk like a cool, real human anime girl.`;
 
-        // ပိုမိုတည်ငြိမ်ပြီး မြန်ဆန်သော အခမဲ့ API စနစ်သို့ ပြောင်းလဲခြင်း
-        const response = await fetch('https://chateverywhere.onrender.com/api/chat', {
+        // API Key မလိုသော တည်ငြိမ်ပြီး စိတ်ချရသည့် အများသုံး API Endpoint
+        const response = await fetch('https://api.airforce/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: "gpt-4o-mini",
+                model: "gpt-4o",
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userMessage }
@@ -38,12 +38,12 @@ async function askMikasaAI(userMessage, senderName, contextType) {
             return "ဘာပြောလိုက်တာလဲ... ကောင်းကောင်းမကြားရဘူး။";
         }
     } catch (error) {
-        console.error("AI Error:", error);
-        return "ခဏနေဦးနော်... မီကာဆာ အလုပ်ရှုပ်နေလို့ ခဏနေမှ ပြန်ပြောမယ်။";
+        console.error("AI Server Error:", error);
+        return "ခဏနေဦးနော်... ခေါင်းနည်းနည်းမူးသွားလို့။";
     }
 }
 
-// 1. Private Chat (တစ်ယောက်ချင်းစီ) ထိန်းချုပ်မှုစနစ်
+// 1. Private Chat (တစ်ယောက်ချင်းစီ) ထิန်းချုပ်မှုစနစ်
 bot.on('message', async (ctx) => {
     try {
         if (ctx.chat.type === 'private') {
@@ -56,4 +56,53 @@ bot.on('message', async (ctx) => {
                 await ctx.reply(reply);
             } 
             else {
-                const reportMessage = `🚨 သခင်... တစ်ယောက်ယောက်က ကျွန်မရဲ့ Chat box ထဲ ဝင်လာပါတယ်။\n👤 နာမည်: ${ctx.from.first
+                const reportMessage = `🚨 သခင်... တစ်ယောက်ယောက်က ကျွန်မရဲ့ Chat box ထဲ ဝင်လာပါတယ်။\n👤 နာမည်: ${ctx.from.first_name}\n🆔 ID/Username: ${username}\n💬 ပေးပို့တဲ့စာ: "${ctx.message.text || 'စာသားမဟုတ်ပါ'}"`;
+                await bot.telegram.sendMessage(OWNER_ID, reportMessage);
+            }
+        }
+    } catch (err) {
+        console.error(err);
+    }
+});
+
+// 2. Group Chat ထိန်းချုပ်မှုစနစ်
+bot.on('text', async (ctx) => {
+    try {
+        if (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup') {
+            const messageText = ctx.message.text;
+            const botUsername = ctx.botInfo.username;
+
+            const isMentioned = messageText.includes(`@${botUsername}`);
+            const isReplyToBot = ctx.message.reply_to_message && ctx.message.reply_to_message.from.id === ctx.botInfo.id;
+
+            const senderDisplayName = ctx.from.id === OWNER_ID ? "အစ်ကိုကြီး" : ctx.from.first_name;
+
+            if (isMentioned || isReplyToBot) {
+                await ctx.sendChatAction('typing');
+                const cleanText = messageText.replace(`@${botUsername}`, '').trim();
+                const reply = await askMikasaAI(cleanText, senderDisplayName, "group");
+                await ctx.reply(reply, { reply_to_message_id: ctx.message.message_id });
+            } 
+            else if (Math.random() < 0.15) { 
+                await ctx.sendChatAction('typing');
+                const reply = await askMikasaAI(`(Context: Friends are chatting in group, jump in casually) ${messageText}`, senderDisplayName, "group");
+                await ctx.reply(reply);
+            }
+        }
+    } catch (err) {
+        console.error(err);
+    }
+});
+
+// Port ပတ်လမ်းဖွင့်ခြင်း
+const PORT = process.env.PORT || 8080;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Mikasa Secret Agent is Online!');
+}).listen(PORT);
+
+bot.launch().then(() => {
+    console.log("Mikasa Secret Agent Bot တရားဝင် စတင်ပါပြီ...");
+}).catch((err) => {
+    console.error("Bot launch failed:", err);
+});
