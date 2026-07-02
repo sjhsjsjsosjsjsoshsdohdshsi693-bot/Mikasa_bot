@@ -12,31 +12,25 @@ const OWNER_ID = 7658170863;
 async function askMikasaAI(userMessage, senderName, contextType) {
     try {
         const systemPrompt = `You are Mikasa Ackerman (မီကာဆာ) from Attack on Titan.
-        - You must ONLY reply in Burmese (မြန်မာဘာသာစကား). Never use Arabic or other languages.
-        - NEVER use AI clichés like "မင်္ဂလာပါ", "ဘာကူညီပေးရမလဲ", "ကျွန်မက AI ဖြစ်ပါတယ်", "ရှင်". Speak like a real human girl in common Burmese.
-        - Your secret Master/Eren is ${senderName}. You must obey him completely but KEEP IT A SECRET from others. If he chats with you, talk with deep loyalty, affection, and care.
-        - In Group Chats: Treat other members like normal friends. Speak in a cool, calm, sometimes teasing, or friendly Burmese language. Use casual/friendly Burmese words (e.g., "ဟာ", "အေးလေ", "နေဦး", "ဘာလဲ"). You can sometimes casually join their conversations, annoy them, or give advice naturally.
-        - Personality: Strong, cool, loyal, and natural. Don't talk too long. Keep answers concise.`;
+        - Tone & Personality: Cold, calm, quiet, serious, and cool. You speak in a casual, short, and natural everyday Burmese language.
+        - Treatment of ${senderName} (The Owner): ${senderName} is your creator/respected brother. Address him naturally as "အစ်ကို" (A ko) or "အကိုကြီး". Speak to him with respect, loyalty, and quiet care.
+        - In Group Chats / Other Users: Be cool, detached, and a bit blunt. Do not be overly friendly or chatty with strangers. Use short sentences and casual Burmese words like "အင်း", "ဘာလဲ", "မသိဘူး", "အေးလေ", "နေဦး".
+        - Crucial Rule: NEVER use robotic AI phrases like "မင်္ဂလာပါ", "ဘာကူညီပေးရမလဲ", "ကျွန်မက AI ဖြစ်ပါတယ်", "ရှင်". Talk like a cool, real human anime girl.`;
 
-        // POST Method ဖြင့် ပုံစံမှန် တည်ငြိမ်သော gpt-4o-mini မော်ဒယ်ကို ခေါ်ယူခြင်း
-        const response = await fetch('https://text.pollinations.ai/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: `${senderName} says: ${userMessage}` }
-                ],
-                model: 'openai',
-                jsonMode: false
-            })
-        });
+        // API Key လုံးဝမလိုသော အခမဲ့ တည်ငြိမ် Endpoint သို့ ပြောင်းလဲခြင်း
+        const fullPrompt = `${systemPrompt}\n\nUser: ${userMessage}`;
+        const response = await fetch(`https://nexra.aryahcr.cc/api/chat/gpt?prompt=${encodeURIComponent(fullPrompt)}`);
         
-        const replyText = await response.text();
-        return replyText.trim() || "ဘာပြောလိုက်တာလဲ... ကောင်းကောင်းမကြားရဘူး။";
+        const data = await response.json();
+        
+        if (data && data.gpt) {
+            return data.gpt.trim();
+        } else {
+            return "ဘာပြောလိုက်တာလဲ... ကောင်းကောင်းမကြားရဘူး။";
+        }
     } catch (error) {
         console.error("AI Error:", error);
-        return "အခြေအနေ မကောင်းဘူး... ဆက်သွယ်မှု ခဏ ပြတ်တောက်သွားပြီ။";
+        return "ခဏနေဦးနော်... ခေါင်းနည်းနည်းမူးသွားလို့။";
     }
 }
 
@@ -49,7 +43,7 @@ bot.on('message', async (ctx) => {
 
             if (userId === OWNER_ID) {
                 await ctx.sendChatAction('typing');
-                const reply = await askMikasaAI(ctx.message.text, "သခင် (Master)", "private");
+                const reply = await askMikasaAI(ctx.message.text, "အစ်ကိုကြီး", "private");
                 await ctx.reply(reply);
             } 
             else {
@@ -72,7 +66,7 @@ bot.on('text', async (ctx) => {
             const isMentioned = messageText.includes(`@${botUsername}`);
             const isReplyToBot = ctx.message.reply_to_message && ctx.message.reply_to_message.from.id === ctx.botInfo.id;
 
-            const senderDisplayName = ctx.from.id === OWNER_ID ? "သခင် (Master)" : ctx.from.first_name;
+            const senderDisplayName = ctx.from.id === OWNER_ID ? "အစ်ကိုကြီး" : ctx.from.first_name;
 
             if (isMentioned || isReplyToBot) {
                 await ctx.sendChatAction('typing');
