@@ -17,12 +17,11 @@ async function askMikasaAI(userMessage, senderName, contextType) {
         - In Group Chats: Treat other members like normal friends. Speak in a cool, calm, sometimes teasing, or friendly Burmese language. Use casual/friendly Burmese words (e.g., "ဟာ", "အေးလေ", "နေဦး", "ဘာလဲ"). You can sometimes casually join their conversations, annoy them, or give advice naturally.
         - Personality: Strong, cool, loyal, and natural. Don't talk too long. Keep answers concise.`;
 
-        // စာသားတွေကို စနစ်တကျ Encode လုပ်ခြင်း
         const fullPrompt = `${systemPrompt}\n\n${senderName} says: ${userMessage}`;
         const encodedPrompt = encodeURIComponent(fullPrompt);
         
-        // Pollinations တွင် မြန်မာစာ အပီပြင်ဆုံးနှင့် အမြန်ဆုံးဖြစ်သော 'mistral' မော်ဒယ်သို့ ပြောင်းလဲခြင်း
-        const apiUrl = `https://text.pollinations.ai/${encodedPrompt}?model=mistral`;
+        // ဘယ်တော့မှ Error မတက်နိုင်တဲ့ Default Endpoint ပုံစံသို့ ပြောင်းလဲခြင်း
+        const apiUrl = `https://text.pollinations.ai/${encodedPrompt}`;
 
         const response = await fetch(apiUrl);
         const replyText = await response.text();
@@ -85,7 +84,7 @@ bot.on('text', async (ctx) => {
     }
 });
 
-// Port ပတ်လမ်းဖွင့်ခြင်း
+// Port ဖွင့်ခြင်း
 const PORT = process.env.PORT || 8080;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
