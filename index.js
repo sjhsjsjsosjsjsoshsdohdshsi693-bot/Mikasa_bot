@@ -1,63 +1,79 @@
-import TelegramBot from "node-telegram-bot-api";
-import { GoogleGenAI } from "@google/genai";
-import dotenv from "dotenv";
+const { Telegraf } = require('telegraf');
+const axios = require('axios');
 
-dotenv.config();
+// Environment Variables
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 
-if (!process.env.BOT_TOKEN) {
-  console.error("BOT_TOKEN is missing!");
-  process.exit(1);
+if (!TELEGRAM_TOKEN) {
+    console.error("Error: TELEGRAM_TOKEN is not defined in environment variables.");
+    process.exit(1);
 }
 
-if (!process.env.GEMINI_API_KEY) {
-  console.error("GEMINI_API_KEY is missing!");
-  process.exit(1);
+// Bot Setup
+const bot = new Telegraf(TELEGRAM_TOKEN);
+
+async function getAIResponse(userMessage) {
+    try {
+        // Using Pollinations AI - Free and no API key required
+        const systemPrompt = "You are a helpful assistant who speaks Burmese fluently and naturally. Respond to the user in Burmese. Use polite and friendly tone.";
+        const encodedMessage = encodeURIComponent(userMessage);
+        const encodedSystem = encodeURIComponent(systemPrompt);
+        
+        // Pollinations AI endpoint for text generation (OpenAI compatible API)
+        const url = `https://text.pollinations.ai/openai/chat/completions`;
+        
+        const response = await axios.post(url, {
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userMessage }
+            ],
+            model: "openai" // or "mistral", "llama"
+        });
+
+        if (response.data && response.data.choices && response.data.choices[0]) {
+            return response.data.choices[0].message.content;
+        } else {
+            return "စိတ်မကောင်းပါဘူး၊ အခုလောလောဆယ် အခက်အခဲလေးရှိနေလို့ နောက်မှ ပြန်မေးပေးပါနော်။";
+        }
+    } catch (error) {
+        console.error("AI Error:", error.message);
+        return "စိတ်မကောင်းပါဘူး၊ အခုလောလောဆယ် အခက်အခဲလေးရှိနေလို့ နောက်မှ ပြန်မေးပေးပါနော်။";
+    }
 }
 
-const bot = new TelegramBot(process.env.BOT_TOKEN, {
-  polling: true,
+bot.on('text', async (ctx) => {
+    const userText = ctx.message.text;
+    
+    try {
+        // Show "typing..." action
+        await ctx.sendChatAction('typing');
+        
+        // Get AI response
+        const aiReply = await getAIResponse(userText);
+        
+        // Send reply
+        await ctx.reply(aiReply);
+    } catch (err) {
+        console.error("Bot Error:", err);
+    }
 });
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
+// Railway needs a web server to keep the service alive
+const http = require('http');
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Burmese AI Bot is running\n');
 });
 
-const personality = `
-You are Mikasa Ackerman.
-
-Speak softly.
-Protect the user.
-Be caring.
-Be calm.
-Never say you are an AI.
-Reply naturally like a human.
-`;
-
-console.log("✅ Mikasa Bot Running...");
-
-bot.on("message", async (msg) => {
-  if (!msg.text) return;
-
-  const chatId = msg.chat.id;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `${personality}\n\nUser: ${msg.text}`,
-            },
-          ],
-        },
-      ],
-    });
-
-    await bot.sendMessage(chatId, response.text);
-  } catch (err) {
-    console.error(err);
-    await bot.sendMessage(chatId, "Sorry, something went wrong.");
-  }
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Health check server running on port ${PORT}`);
 });
+
+bot.launch().then(() => {
+    console.log('Bot is starting with polling...');
+});
+
+// Enable graceful stop
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
