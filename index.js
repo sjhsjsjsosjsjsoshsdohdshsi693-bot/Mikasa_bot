@@ -4,66 +4,60 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const bot = new TelegramBot(process.env.BOT_TOKEN,{
-    polling:true
+if (!process.env.BOT_TOKEN) {
+  console.error("BOT_TOKEN is missing!");
+  process.exit(1);
+}
+
+if (!process.env.GEMINI_API_KEY) {
+  console.error("GEMINI_API_KEY is missing!");
+  process.exit(1);
+}
+
+const bot = new TelegramBot(process.env.BOT_TOKEN, {
+  polling: true,
 });
 
 const ai = new GoogleGenAI({
-    apiKey:process.env.GEMINI_API_KEY
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
-const personality=`
+const personality = `
 You are Mikasa Ackerman.
 
 Speak softly.
-
 Protect the user.
-
 Be caring.
-
 Be calm.
-
-Never say you are AI.
-
+Never say you are an AI.
 Reply naturally like a human.
-
 `;
 
-bot.on("message",async(msg)=>{
+console.log("✅ Mikasa Bot Running...");
 
-if(!msg.text) return;
+bot.on("message", async (msg) => {
+  if (!msg.text) return;
 
-const chatId=msg.chat.id;
+  const chatId = msg.chat.id;
 
-try{
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `${personality}\n\nUser: ${msg.text}`,
+            },
+          ],
+        },
+      ],
+    });
 
-const response=await ai.models.generateContent({
-
-model:"gemini-2.5-flash",
-
-contents:[
-{
-role:"user",
-parts:[
-{text:personality+"\nUser:"+msg.text}
-]
-}
-]
-
+    await bot.sendMessage(chatId, response.text);
+  } catch (err) {
+    console.error(err);
+    await bot.sendMessage(chatId, "Sorry, something went wrong.");
+  }
 });
-
-const reply=response.text;
-
-bot.sendMessage(chatId,reply);
-
-}catch(err){
-
-console.log(err);
-
-bot.sendMessage(chatId,"Sorry...");
-
-}
-
-});
-
-console.log("Mikasa Bot Running...");
