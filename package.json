@@ -1,59 +1,16 @@
-import TelegramBot from "node-telegram-bot-api";
-import { GoogleGenAI } from "@google/genai";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const bot = new TelegramBot(process.env.BOT_TOKEN, {
-  polling: true,
-});
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
-
-const personality = `
-You are Mikasa Ackerman.
-
-Speak softly.
-Protect the user.
-Be caring.
-Be calm.
-Reply naturally like a human.
-Never say you are an AI.
-`;
-
-bot.on("message", async (msg) => {
-  if (!msg.text) return;
-
-  const chatId = msg.chat.id;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `${personality}\n\nUser: ${msg.text}`,
-            },
-          ],
-        },
-      ],
-    });
-
-    const reply = response.text || "I don't know what to say.";
-
-    await bot.sendMessage(chatId, reply);
-  } catch (err) {
-    console.error(err);
-
-    await bot.sendMessage(
-      chatId,
-      `❌ Error:\n${err.message || JSON.stringify(err)}`
-    );
+{
+  "name": "burmese-ai-telegram-bot",
+  "version": "1.0.0",
+  "description": "A Telegram Bot that speaks Burmese using Free AI (No API Key)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.16.3",
+    "axios": "^1.6.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
-});
-
-console.log("✅ Mikasa Bot Running...");
+}
