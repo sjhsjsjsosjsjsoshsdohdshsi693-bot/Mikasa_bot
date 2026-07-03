@@ -1,14 +1,59 @@
-{
-  "name": "mikasa-ai-bot",
-  "version": "1.0.0",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "@google/genai": "^1.10.0",
-    "dotenv": "^16.4.5",
-    "node-telegram-bot-api": "^0.66.0"
+import TelegramBot from "node-telegram-bot-api";
+import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const bot = new TelegramBot(process.env.BOT_TOKEN, {
+  polling: true,
+});
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
+const personality = `
+You are Mikasa Ackerman.
+
+Speak softly.
+Protect the user.
+Be caring.
+Be calm.
+Reply naturally like a human.
+Never say you are an AI.
+`;
+
+bot.on("message", async (msg) => {
+  if (!msg.text) return;
+
+  const chatId = msg.chat.id;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `${personality}\n\nUser: ${msg.text}`,
+            },
+          ],
+        },
+      ],
+    });
+
+    const reply = response.text || "I don't know what to say.";
+
+    await bot.sendMessage(chatId, reply);
+  } catch (err) {
+    console.error(err);
+
+    await bot.sendMessage(
+      chatId,
+      `❌ Error:\n${err.message || JSON.stringify(err)}`
+    );
   }
-}
+});
+
+console.log("✅ Mikasa Bot Running...");
