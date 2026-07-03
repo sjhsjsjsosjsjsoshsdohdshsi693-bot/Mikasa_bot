@@ -1,44 +1,32 @@
-import fetch from 'node-fetch';
 import { Telegraf } from 'telegraf';
 import http from 'http';
+import { G4F } from 'g4f'; // ဒီ Library က API Key မလိုဘဲ အခမဲ့သုံးတာပါ
 
-// အစ်ကို့ရဲ့ Telegram Bot Token
-const BOT_TOKEN = process.env.BOT_TOKEN || '8789687230:AAFNzWij27xkGLdCXjadVc_Igmkmq56BCrQ';
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf('8789687230:AAFNzWij27xkGLdCXjadVc_Igmkmq56BCrQ');
+const g4f = new G4F();
+const OWNER_ID = 7658170863;
 
-// အစ်ကို့ရဲ့ Telegram User ID
-const OWNER_ID = 7658170863; 
-
-async function askMikasaAI(userMessage, senderName, contextType) {
+async function askAI(userMessage) {
     try {
-        const systemPrompt = `You are Mikasa Ackerman (မီကာဆာ) from Attack on Titan.
-        - Tone & Personality: Cold, calm, quiet, serious, and cool. You speak in a casual, short, and natural everyday Burmese language.
-        - Treatment of ${senderName} (The Owner): ${senderName} is your creator/respected brother. Address him naturally as "အစ်ကို" (A ko) or "အကိုကြီး". Speak to him with respect, loyalty, and quiet care.
-        - In Group Chats / Other Users: Be cool, detached, and a bit blunt. Do not be overly friendly or chatty with strangers. Use short sentences and casual Burmese words like "အင်း", "ဘာလဲ", "မသိဘူး", "အေးလေ", "နေဦး".
-        - Crucial Rule: NEVER use robotic AI phrases like "မင်္ဂလာပါ", "ဘာကူညီပေးရမလဲ", "ကျွန်မက AI ဖြစ်ပါတယ်", "ရှင်". Talk like a cool, real human anime girl.`;
+        const messages = [
+            { role: "system", content: "You are Mikasa Ackerman. Speak casual Burmese, be cool, serious, and short." },
+            { role: "user", content: userMessage }
+        ];
+        const response = await g4f.chatCompletion(messages, { model: "gpt-4o" });
+        return response;
+    } catch (error) {
+        return "ခဏလေးနော်... စက်နည်းနည်း ပူသွားလို့။";
+    }
+}
 
-        // စနစ်ကျပြီး ပုံစံမှန်ကန်သော အခမဲ့ API Endpoint
-        const response = await fetch('https://api.airforce/v1/chat/completions', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer Missing-Token' // Airforce အတွက် မဖြစ်မနေလိုအပ်သော format
-            },
-            body: JSON.stringify({
-                model: "gpt-4o", // တည်ငြိမ်ပြီး စာပြန်နှုန်းကောင်းသော မော်ဒယ်
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userMessage }
-                ],
-                temperature: 0.7
-            })
-        });
+bot.on('text', async (ctx) => {
+    if (ctx.chat.type === 'private' && ctx.from.id === OWNER_ID) {
+        await ctx.sendChatAction('typing');
+        const reply = await askAI(ctx.message.text);
+        await ctx.reply(reply);
+    }
+});
 
-        // Response အခြေအနေကို စစ်ဆေးခြင်း
-        if (!response.ok) {
-            return "ခဏနေဦး... လိုင်းသိပ်မကောင်းလို့ ထင်တယ်။";
-        }
-
-        const data = await response.json();
-        
-        if (data && data.choices && data.choices[0] && data.choices
+const PORT = process.env.PORT || 8080;
+http.createServer((req, res) => res.end('Bot is running')).listen(PORT);
+bot.launch().then(() => console.log("Bot အလုပ်လုပ်နေပါပြီ"));
